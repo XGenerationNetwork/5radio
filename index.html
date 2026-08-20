@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5RADIO — Internet Radio Finder</title>
+<meta name="description" content="Find and play internet radio stations by genre and region, or hit SCAN for a random one. A 1980s boombox for the whole world's airwaves.">
+<link rel="stylesheet" href="css/boombox.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='5' fill='%23151519'/><circle cx='10' cy='19' r='5.5' fill='none' stroke='%23ff3b6b' stroke-width='2'/><circle cx='22' cy='19' r='5.5' fill='none' stroke='%2300e5d0' stroke-width='2'/><path d='M6 10h20' stroke='%23f7c948' stroke-width='2' stroke-linecap='round'/></svg>">
+</head>
+<body>
+
+<a class="skip-link" href="#dial">Skip to the station controls</a>
+
+<header class="site-head">
+  <div class="brand">
+    <span class="brand-5">5</span><span class="brand-word">RADIO</span>
+  </div>
+  <p class="tagline">Point the antenna at the whole planet. <span>Pick a genre, pick a region, or just hit SCAN.</span></p>
+</header>
+
+<main>
+
+<!-- ══════════════════════════════ THE BOOMBOX ══════════════════════════════ -->
+<section class="stage" aria-label="Radio">
+  <div class="boombox" id="boombox">
+
+    <!-- telescoping antenna -->
+    <div class="antenna" aria-hidden="true">
+      <div class="ant-seg ant-3"></div>
+      <div class="ant-seg ant-2"></div>
+      <div class="ant-seg ant-1"></div>
+      <div class="ant-base"></div>
+      <div class="ant-tip"></div>
+    </div>
+
+    <!-- carry handle -->
+    <div class="handle" aria-hidden="true"><i></i><b class="hinge hinge-l"></b><b class="hinge hinge-r"></b></div>
+
+    <div class="chassis">
+
+      <div class="top-strip" aria-hidden="true">
+        <span class="badge-model">5R&#8209;808 <em>STEREO</em></span>
+        <span class="vents"></span>
+        <span class="power-lamp" id="powerLamp" title="Power"></span>
+      </div>
+
+      <div class="deck">
+
+        <!-- ─────────── left speaker ─────────── -->
+        <div class="speaker" aria-hidden="true">
+          <div class="woofer">
+            <div class="cone"><span class="dustcap"></span></div>
+          </div>
+          <div class="tweeter"></div>
+          <span class="spk-label">3&#8209;WAY BASS REFLEX</span>
+        </div>
+
+        <!-- ─────────── centre console ─────────── -->
+        <div class="console">
+
+          <!-- LCD / fluorescent display -->
+          <div class="lcd" id="lcd">
+            <div class="lcd-glass">
+              <div class="lcd-row lcd-top">
+                <span class="lcd-mode" id="lcdMode">STOP</span>
+                <span class="lcd-stereo" id="lcdStereo">◄ STEREO ►</span>
+                <span class="lcd-freq" id="lcdFreq">— — —</span>
+              </div>
+
+              <div class="lcd-marquee">
+                <div class="lcd-name" id="lcdName" role="status" aria-live="polite">SELECT A STATION</div>
+              </div>
+
+              <div class="lcd-row lcd-sub">
+                <span id="lcdMeta">PRESS SCAN FOR A RANDOM STATION</span>
+                <span id="lcdQuality"></span>
+              </div>
+            </div>
+            <div class="lcd-scan" aria-hidden="true"></div>
+          </div>
+
+          <!-- tuning scale + needle -->
+          <div class="tuner" aria-hidden="true">
+            <div class="scale">
+              <span class="band">FM</span>
+              <div class="ticks" id="ticks"></div>
+              <div class="needle" id="needle"></div>
+            </div>
+          </div>
+
+          <!-- VU meters -->
+          <div class="vu" aria-hidden="true">
+            <div class="vu-ch"><span class="vu-lab">L</span><div class="leds" id="vuL"></div></div>
+            <div class="vu-ch"><span class="vu-lab">R</span><div class="leds" id="vuR"></div></div>
+          </div>
+
+          <!-- cassette deck -->
+          <div class="cassette" aria-hidden="true">
+            <div class="cass-door">
+              <div class="cass-window">
+                <div class="reel reel-l"><i></i></div>
+                <div class="tape-span"></div>
+                <div class="reel reel-r"><i></i></div>
+              </div>
+              <span class="cass-text">AUTO&#8209;REVERSE · DOLBY* NR</span>
+            </div>
+          </div>
+
+          <!-- transport buttons -->
+          <div class="transport">
+            <button class="key" id="btnPrev" type="button" title="Previous station (←)">
+              <span class="glyph">◀◀</span><span class="key-lab">PREV</span>
+            </button>
+            <button class="key key-play" id="btnPlay" type="button" title="Play / pause (Space)" aria-pressed="false">
+              <span class="glyph" id="playGlyph">▶</span><span class="key-lab" id="playLab">PLAY</span>
+            </button>
+            <button class="key" id="btnStop" type="button" title="Stop">
+              <span class="glyph">■</span><span class="key-lab">STOP</span>
+            </button>
+            <button class="key" id="btnNext" type="button" title="Next station (→)">
+              <span class="glyph">▶▶</span><span class="key-lab">NEXT</span>
+            </button>
+            <button class="key key-scan" id="btnScan" type="button" title="Random station (R)">
+              <span class="glyph">⤨</span><span class="key-lab">SCAN</span>
+            </button>
+          </div>
+
+          <!-- volume fader -->
+          <div class="fader">
+            <label for="volume">VOL</label>
+            <input type="range" id="volume" min="0" max="100" value="80" aria-label="Volume">
+            <output id="volOut">80</output>
+          </div>
+
+        </div>
+
+        <!-- ─────────── right speaker ─────────── -->
+        <div class="speaker" aria-hidden="true">
+          <div class="woofer">
+            <div class="cone"><span class="dustcap"></span></div>
+          </div>
+          <div class="tweeter"></div>
+          <span class="spk-label">3&#8209;WAY BASS REFLEX</span>
+        </div>
+
+      </div>
+
+      <div class="feet" aria-hidden="true"><i></i><i></i></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ FILTERS / DIAL ═══════════════════════════ -->
+<section class="dial-panel" id="dial" aria-label="Find stations">
+  <div class="dial-grid">
+
+    <div class="selector">
+      <label for="genre">GENRE</label>
+      <div class="sel-shell">
+        <select id="genre"><option value="">All genres</option></select>
+      </div>
+    </div>
+
+    <div class="selector">
+      <label for="region">REGION</label>
+      <div class="sel-shell">
+        <select id="region"><option value="">Everywhere</option></select>
+      </div>
+    </div>
+
+    <div class="selector selector-wide">
+      <label for="search">SEARCH</label>
+      <div class="sel-shell">
+        <input type="search" id="search" placeholder="Station name, city, or tag…" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="selector selector-actions">
+      <label>&nbsp;</label>
+      <div class="act-row">
+        <button type="button" class="pill pill-hot" id="btnScan2">🎲 RANDOM STATION</button>
+        <button type="button" class="pill" id="btnReset">RESET</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="dial-status">
+    <span id="count" class="count">—</span>
+    <span class="sep">·</span>
+    <span class="src-toggle">
+      <label class="switch">
+        <input type="checkbox" id="liveMode">
+        <span class="slider" aria-hidden="true"></span>
+        <span class="switch-lab">LIVE SEARCH <em>(radio&#8209;browser.info)</em></span>
+      </label>
+    </span>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ STATION RACK ═══════════════════════════ -->
+<section class="rack" aria-label="Stations">
+  <div class="rack-head">
+    <h2>Station rack</h2>
+    <div class="sort">
+      <label for="sort">SORT</label>
+      <select id="sort">
+        <option value="popular">Most listened</option>
+        <option value="name">Name (A–Z)</option>
+        <option value="place">Place</option>
+        <option value="bitrate">Bitrate</option>
+      </select>
+    </div>
+  </div>
+
+  <ul class="stations" id="list"></ul>
+  <div class="rack-more">
+    <button type="button" class="pill" id="btnMore" hidden>LOAD MORE</button>
+    <p class="empty" id="empty" hidden>No stations match those settings. Try widening the genre or region.</p>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-foot">
+  <p>
+    Station data from the <a href="https://www.radio-browser.info/" target="_blank" rel="noopener noreferrer">Radio&nbsp;Browser</a>
+    open database, seeded with the stations named in Wikipedia's
+    <a href="https://en.wikipedia.org/wiki/List_of_Internet_radio_stations" target="_blank" rel="noopener noreferrer">List of Internet radio stations</a>.
+  </p>
+  <p class="fine">
+    Streams belong to the broadcasters and play straight from their servers. Some go off air, change address, or
+    refuse outside players — when one won't tune, use the <span class="mono">↗</span> link to open it at the source.
+  </p>
+</footer>
+
+<audio id="player" preload="none"></audio>
+
+<script src="data/stations.js"></script>
+<script src="js/taxonomy.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

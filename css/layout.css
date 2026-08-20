@@ -1,0 +1,386 @@
+/* ============================================================================
+   5RADIO — page around the machine
+   Header, filter panel, station rack, footer.
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* The page is dark throughout, so tell the browser as much: native dropdown
+ * popups, scrollbars and focus rings then render dark instead of defaulting to
+ * a light system panel that our pale text disappears into. */
+:root { color-scheme: dark; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: #d9dce1;
+  font: 400 16px/1.55 "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  background-color: #0b0b0f;
+  background-image:
+    /* neon horizon glow */
+    radial-gradient(120% 70% at 50% 0%, rgba(255, 59, 107, 0.16), transparent 62%),
+    radial-gradient(90% 60% at 12% 22%, rgba(0, 229, 208, 0.11), transparent 60%),
+    /* the grid, receding to a vanishing point */
+    linear-gradient(rgba(255, 59, 107, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 229, 208, 0.07) 1px, transparent 1px);
+  background-size: auto, auto, 100% 46px, 46px 100%;
+  background-attachment: fixed;
+}
+
+a { color: var(--cyan); }
+a:hover { color: #6ffff0; }
+
+.mono { font-family: ui-monospace, "Consolas", monospace; }
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  padding: 10px 16px;
+  background: var(--hot);
+  color: #fff;
+  z-index: 50;
+}
+.skip-link:focus { left: 8px; top: 8px; }
+
+/* ───────────────────────────── header ───────────────────────────── */
+
+.site-head {
+  padding: clamp(22px, 4vw, 44px) 20px 0;
+  text-align: center;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: baseline;
+  font: 900 clamp(38px, 7.5vw, 76px) / 0.9 "Inter", system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+.brand-5 {
+  color: var(--hot);
+  text-shadow:
+    0 0 14px rgba(255, 59, 107, 0.75),
+    0 0 44px rgba(255, 59, 107, 0.35);
+}
+.brand-word {
+  background: linear-gradient(180deg, #ffffff 8%, #b9c0c8 46%, #6d747c 52%, #eef1f4 92%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  letter-spacing: 0.02em;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.6));
+}
+
+.tagline {
+  margin: 10px auto 0;
+  max-width: 46ch;
+  color: #9aa2ac;
+  font-size: clamp(14px, 1.6vw, 17px);
+}
+.tagline span { display: block; color: #6f7783; font-size: 0.92em; }
+
+/* ────────────────────────── filter panel ────────────────────────── */
+
+.dial-panel {
+  width: min(100%, 1020px);
+  margin: clamp(10px, 2vw, 24px) auto 0;
+  padding: clamp(14px, 2vw, 20px);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(38, 40, 46, 0.92), rgba(19, 20, 23, 0.92));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 18px 40px rgba(0, 0, 0, 0.5);
+}
+
+.dial-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+}
+.selector-wide { grid-column: span 2; }
+
+.selector label {
+  display: block;
+  margin-bottom: 6px;
+  font: 700 11px/1 ui-monospace, "Consolas", monospace;
+  letter-spacing: 0.2em;
+  color: #8d949d;
+}
+
+/* the recessed bezel every control sits in */
+.sel-shell {
+  position: relative;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #0d0e11, #17191d);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.sel-shell::after {
+  content: "▾";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--cyan);
+  pointer-events: none;
+  font-size: 13px;
+}
+.sel-shell:has(input)::after { content: "⌕"; font-size: 16px; }
+
+.sel-shell select,
+.sel-shell input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  padding: 12px 34px 12px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #e7eaee;
+  font: 600 15px/1.2 "Inter", system-ui, sans-serif;
+  cursor: pointer;
+}
+.sel-shell input { cursor: text; }
+.sel-shell input::placeholder { color: #5f666f; font-weight: 400; }
+.sel-shell select:focus-visible,
+.sel-shell input:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 1px;
+}
+/* Every select on the page, not just the ones inside a .sel-shell bezel --
+ * an unstyled option inherits a transparent background and gets painted on the
+ * platform's own popup colour, which leaves pale text on white. */
+.sel-shell option,
+.sort select option {
+  background: #16181c;
+  color: #e7eaee;
+}
+
+/* The buttons get their own full-width row: cramming them into one grid cell
+ * wraps "RANDOM STATION" onto two lines. */
+.selector-actions { grid-column: 1 / -1; }
+.selector-actions label { display: none; }
+.selector-actions .act-row { display: flex; gap: 8px; }
+.selector-actions .pill { white-space: nowrap; }
+.selector-actions .pill-hot { flex: 3; }
+
+.pill {
+  flex: 1;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font: 700 12px/1.2 ui-monospace, "Consolas", monospace;
+  letter-spacing: 0.12em;
+  color: #dfe3e8;
+  background: linear-gradient(180deg, #43474f, #2b2e34);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 3px 0 #101114;
+  transition: transform 0.06s, box-shadow 0.06s, filter 0.15s;
+}
+.pill:hover { filter: brightness(1.15); }
+.pill:active { transform: translateY(3px); box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.7); }
+.pill:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.pill-hot {
+  color: #fff;
+  background: linear-gradient(180deg, #ff6f8f, #e42553);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 3px 0 #8e0f2e, 0 0 22px rgba(255, 59, 107, 0.35);
+}
+
+.dial-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  font: 600 12px/1 ui-monospace, "Consolas", monospace;
+  letter-spacing: 0.1em;
+  color: #7d848d;
+}
+.count { color: var(--lcd-ink); }
+.sep { opacity: 0.4; }
+
+/* live-search switch */
+.switch { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; }
+.switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.switch .slider {
+  width: 38px;
+  height: 20px;
+  border-radius: 20px;
+  background: #16181c;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 1px 3px rgba(0, 0, 0, 0.8);
+  position: relative;
+  transition: background 0.2s;
+}
+.switch .slider::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #d6dade, #8b9098);
+  transition: transform 0.2s;
+}
+.switch input:checked + .slider { background: rgba(0, 229, 208, 0.3); }
+.switch input:checked + .slider::after { transform: translateX(18px); background: var(--cyan); }
+.switch input:focus-visible + .slider { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.switch-lab em { font-style: normal; opacity: 0.6; }
+
+/* ─────────────────────────── station rack ─────────────────────────── */
+
+.rack {
+  width: min(100%, 1020px);
+  margin: 26px auto 0;
+  padding: 0 clamp(0px, 2vw, 12px);
+}
+
+.rack-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+.rack-head h2 {
+  margin: 0;
+  font: 800 clamp(17px, 2.2vw, 22px) / 1 "Inter", system-ui, sans-serif;
+  letter-spacing: 0.01em;
+  color: #eef1f4;
+}
+.sort { display: flex; align-items: center; gap: 8px; }
+.sort label {
+  font: 700 11px/1 ui-monospace, monospace;
+  letter-spacing: 0.18em;
+  color: #8d949d;
+}
+.sort select {
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 7px;
+  /* Solid colour first: a gradient alone leaves background-color transparent,
+   * and anything that ignores the gradient falls back to white under our pale
+   * text. */
+  background-color: #16181c;
+  background-image: linear-gradient(180deg, #22252a, #16181c);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  color: #d9dce1;
+  font: 600 13px/1 "Inter", system-ui, sans-serif;
+  cursor: pointer;
+}
+.sort select:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+.stations {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+/* each row is a cassette spine: coloured tab, title block, controls */
+.st {
+  display: grid;
+  grid-template-columns: 6px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 10px 0;
+  border-radius: 9px;
+  background: linear-gradient(180deg, rgba(38, 40, 46, 0.75), rgba(20, 21, 25, 0.75));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.08s;
+}
+.st:hover {
+  background: linear-gradient(180deg, rgba(48, 51, 58, 0.85), rgba(26, 28, 33, 0.85));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+.st.current {
+  box-shadow: inset 0 0 0 1px var(--cyan), 0 0 22px rgba(0, 229, 208, 0.16);
+  background: linear-gradient(180deg, rgba(0, 229, 208, 0.11), rgba(20, 21, 25, 0.85));
+}
+.st-tab { align-self: stretch; background: var(--tab, #555); border-radius: 9px 0 0 9px; }
+
+.st-body { min-width: 0; }
+.st-name {
+  display: block;
+  font: 700 15px/1.25 "Inter", system-ui, sans-serif;
+  color: #f1f3f6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.st-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 3px;
+  font: 600 11px/1.4 ui-monospace, "Consolas", monospace;
+  letter-spacing: 0.06em;
+  color: #858d97;
+}
+.chip {
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #c3c9d1;
+}
+.chip-genre { background: var(--tab-soft, rgba(255, 255, 255, 0.1)); color: #fff; }
+
+.st-controls { display: flex; align-items: center; gap: 6px; }
+
+.st-btn {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #e7eaee;
+  text-decoration: none;
+  background: linear-gradient(180deg, #40444b, #2a2d33);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 2px 0 #111316;
+  transition: filter 0.15s, transform 0.06s;
+}
+.st-btn:hover { filter: brightness(1.25); }
+.st-btn:active { transform: translateY(2px); box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.7); }
+.st-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.st-play { color: var(--lime); font-size: 15px; }
+.st.current .st-play { color: var(--amber); }
+
+.rack-more { margin: 18px 0 0; text-align: center; }
+.rack-more .pill { flex: 0 0 auto; padding: 12px 28px; }
+.empty { color: #8d949d; }
+
+/* ───────────────────────────── footer ───────────────────────────── */
+
+.site-foot {
+  width: min(100%, 1020px);
+  margin: 44px auto 0;
+  padding: 22px 20px 46px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  color: #79808a;
+  font-size: 13px;
+  text-align: center;
+}
+.site-foot p { margin: 0 0 8px; }
+.site-foot .fine { font-size: 12px; color: #626973; max-width: 66ch; margin-inline: auto; }
+
+/* ─────────────────────────── responsive ─────────────────────────── */
+
+@media (max-width: 640px) {
+  .selector-wide { grid-column: span 1; }
+  .st { grid-template-columns: 6px minmax(0, 1fr) auto; }
+  .st-btn { width: 34px; height: 34px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { scroll-behavior: auto !important; }
+}

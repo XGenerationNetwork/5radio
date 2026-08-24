@@ -54,6 +54,10 @@
     player: $('player')
   };
 
+  /* Set up by init(); js/save.js owns the timer, the unload hooks and the
+     blob itself. */
+  var autosave = null;
+
   var state = {
     pool: CATALOG.stations,   // what the filters run over (catalog, or live results)
     matches: [],              // current filtered + sorted view
@@ -247,6 +251,9 @@
     try {
       history.replaceState(null, '', '#s=' + encodeURIComponent(station.id));
     } catch (e) { /* file:// can refuse replaceState; the radio still works */ }
+
+    /* The hash is for sharing a link; the session is for closing the tab. */
+    saveNow();
 
     el.player.src = station.url;
     if (autoplay) start();
@@ -496,6 +503,7 @@
   function onFilterChange() {
     if (state.live) refreshLive();
     else applyFilters();
+    saveNow();
   }
 
   /* ------------------------------------------------------------- controls */
@@ -538,17 +546,64 @@
   function setVolume(v) {
     el.player.volume = Math.max(0, Math.min(1, v / 100));
     el.volOut.textContent = v;
-    try { localStorage.setItem('5radio.volume', String(v)); } catch (e) {}
+    saveNow();
   }
 
-  function restorePrefs() {
-    var vol = 80;
-    try {
-      var saved = localStorage.getItem('5radio.volume');
-      if (saved !== null) vol = Number(saved) || 0;
-    } catch (e) {}
-    el.volume.value = vol;
-    setVolume(vol);
+  /* ------------------------------------------------------------- session */
+
+  /* Everything worth coming back to: what is on the dial, how loud, and the
+   * filters that decide what NEXT and SCAN will reach.  See js/save.js. */
+  function sessionSnapshot() {
+    return {
+      station: state.current,
+      volume: Number(el.volume.value),
+      genre: el.genre.value,
+      region: el.region.value,
+      q: el.search.value,
+      sort: el.sort.value,
+      live: state.live,
+      shown: state.shown
+    };
+  }
+
+  /* Saved on every change as well as on the timer, so a tab closed one
+   * second after tuning still comes back to that station. */
+  function saveNow() {
+    if (autosave) autosave.flush();
+  }
+
+  /* Restores the controls, and answers with the station that was tuned so
+   * that boot can put it on the dial once the list around it exists. */
+  function restoreSession() {
+    var session = RADIO_SAVE.loadSession();
+    if (!session) { el.volume.value = 80; setVolume(80); return null; }
+
+    el.volume.value = session.volume;
+    el.player.volume = Math.max(0, Math.min(1, session.volume / 100));
+    el.volOut.textContent = session.volume;
+
+    if (session.genre && hasOption(el.genre, session.genre)) el.genre.value = session.genre;
+    if (session.region && hasOption(el.region, session.region)) el.region.value = session.region;
+    if (session.sort && hasOption(el.sort, session.sort)) el.sort.value = session.sort;
+    el.search.value = session.q;
+
+    /* Live mode is a network pool, so it is put back as a checkbox here and
+     * refreshed by boot rather than fetched from inside a restore. */
+    el.liveMode.checked = session.live;
+    state.live = session.live;
+    if (session.shown > PAGE_SIZE) state.shown = Math.min(session.shown, PAGE_SIZE * 20);
+
+    return session.station;
+  }
+
+  /* A genre or region that the catalog no longer has - it is rebuilt from a
+   * live database - must not leave a select showing something it cannot
+   * filter by. */
+  function hasOption(select, value) {
+    for (var i = 0; i < select.options.length; i++) {
+      if (select.options[i].value === value) return true;
+    }
+    return false;
   }
 
   function stationFromHash() {
@@ -576,7 +631,7 @@
 
     el.genre.addEventListener('change', onFilterChange);
     el.region.addEventListener('change', onFilterChange);
-    el.sort.addEventListener('change', function () { applyFilters(true); });
+    el.sort.addEventListener('change', function () { applyFilters(true); saveNow(); });
     el.search.addEventListener('input', function () {
       if (state.live) refreshLive();
       else applyFilters();
@@ -590,11 +645,13 @@
         state.pool = CATALOG.stations;
         applyFilters();
       }
+      saveNow();
     });
 
     el.btnMore.addEventListener('click', function () {
       state.shown += PAGE_SIZE;
       render();
+      saveNow();
     });
 
     el.volume.addEventListener('input', function () { setVolume(Number(el.volume.value)); });
@@ -654,14 +711,25 @@
     buildTicks();
     buildVU();
     populateSelects();
-    restorePrefs();
+
+    /* The controls come back before the list is built, so the filters the
+     * session restored are the ones applyFilters() reads. */
+    var last = restoreSession();
     wire();
-    applyFilters();
+
+    if (state.live) refreshLive();             // the pool was the network
+    else applyFilters(true);                   // keep the restored page size
     requestAnimationFrame(animateVU);
 
-    var deep = stationFromHash();
-    if (deep) {
-      tune(deep, false);                       // cue it up, but never autoplay on load
+    autosave = RADIO_SAVE.autosave(sessionSnapshot);
+
+    /* A link that names a station beats the session: someone opening a
+     * shared #s= link wants that station, not the one they left. */
+    var station = stationFromHash() || last;
+    if (station) {
+      /* Cued, never played: a browser refuses audio without a gesture, and
+       * a tab that starts making noise on its own is a bad neighbour. */
+      tune(station, false);
       el.lcdMeta.textContent = 'PRESS PLAY';
     } else {
       setMode('STOP');

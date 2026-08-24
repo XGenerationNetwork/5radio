@@ -77,6 +77,7 @@ css/layout.css        page, filter panel, station rack
 js/taxonomy.js        genre + region classifier, shared by the page and the tools
 js/save.js            the session — what is on the dial, kept in localStorage
 js/app.js             filtering, tuning, playback, live search
+js/osbridge.js        lets 5OS's on-screen keyboard type into this page
 data/stations.js      the catalog as a <script>  ← what the page loads
 data/stations.json    the same catalog as JSON   ← what the tools read
 tools/                catalog pipeline (Node 18+)
@@ -125,6 +126,47 @@ error next to a 2,884 station catalog.
 
 A `#s=` link beats the saved session: someone opening a shared link wants that
 station, not the one they left.
+
+### Typing when 5OS frames this page
+
+`js/osbridge.js` is what makes 5OS's on-screen keyboard work here. 5OS cannot
+put a keystroke into another origin's frame — that is a security boundary, not a
+gap — so it posts the key as a message and the framed page dispatches it itself.
+
+The snippet in the 5OS README is not enough on its own, for a reason worth
+writing down: **a synthetic `KeyboardEvent` is untrusted, and an untrusted key
+event performs no default action.** Dispatching the event is enough for
+5RADIO's own shortcuts, which only read `e.key` — but nothing appears in the
+SEARCH box, the REGION dial does not move and the VOL fader does not slide,
+because those are default actions the browser declines to perform for a fake
+event.
+
+So the bridge does what 5OS itself does when a frame happens to be same-origin
+(`js/apps/keyboard.js`): dispatch the real event first, so shortcuts and
+`preventDefault` behave exactly as from a physical keyboard, then — only if
+nobody claimed the key — carry out the default action by hand. The text editing
+is a port of 5OS's own `edit()`, so a key behaves identically either way.
+
+Which means, from the on-screen keyboard:
+
+| Focus | What a key does |
+|---|---|
+| SEARCH box | types, with Backspace, Delete, arrows, Home/End — and the filter re-runs, because the `input` event is fired too |
+| GENRE / REGION / SORT | arrows move through the options, and a letter jumps to it ("j" → Jazz) |
+| VOL fader | arrows nudge, PageUp/PageDown jump, Home/End go to the ends |
+| a transport key | Enter presses it |
+| nothing in particular | the normal shortcuts — Space, R, S, ← → |
+
+The one rule that keeps those from colliding: a letter typed with the SEARCH box
+focused types a letter, it does not also trigger the shortcut. 5RADIO's own key
+handler already ignored text fields; the bridge simply respects `preventDefault`
+for everything else.
+
+Only `5os-key` is handled, because that is the only message kind 5OS actually
+posts, and only from `window.parent` — the embedder drives the keyboard, nobody
+else. Starting playback this way worked in testing; if a browser's autoplay
+policy ever refuses a stream started without a real tap, the display says so and
+one press of PLAY fixes it.
 
 ## Rebuilding the catalog
 

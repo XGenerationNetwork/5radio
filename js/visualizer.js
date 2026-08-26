@@ -88,10 +88,18 @@
     var box = canvas.parentNode;
     if (!box) return;
     var r = box.getBoundingClientRect();
+
+    /* A collapsed parent measures 0x0, and resizing to that clamps to 2x2 —
+       which silently frees and rebuilds the render targets, taking the
+       feedback history with them. The history *is* the picture, so a stage
+       that is merely hidden has to leave the engine alone. The guard belongs
+       on the raw rectangle: Math.max(2, 0) is 2, so a check after the clamp
+       never trips. */
+    if (r.width < 1 || r.height < 1) return;
+
     var dpr = Math.min(window.devicePixelRatio || 1, 2);
     var w = Math.max(2, Math.round(r.width * dpr));
     var h = Math.max(2, Math.round(r.height * dpr));
-    if (!w || !h) return;
     engine.setScale(scaleFor(w, h));
     engine.resize(w, h);
     canvas.style.width = '100%';

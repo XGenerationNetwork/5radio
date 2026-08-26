@@ -1015,15 +1015,23 @@
 }
 .vis-canvas { display: block; width: 100%; height: 100%; }
 
-/* Collapsed until there is something to show. An idle 16:7 black panel is a
-   third of a screen of dead height between the machine and the station list,
-   and it pushes the thing people actually came for below the fold. `display:
-   none` rather than a height transition on purpose: start() adds `is-on` and
-   measures the stage in the same tick, and a stage still animating open would
-   be measured mid-transition and size the canvas to whatever fraction of
-   itself it had reached. NO WEBGL keeps its panel, because that message has
-   nowhere else to live. */
-.vis-deck:not(.is-on):not(.is-failed) .vis-stage { display: none; }
+/* The stage is only worth its height while the canvas is actually living in
+   it. Stopped, there is nothing to see; on the backdrop, the canvas has left
+   for the back of the page and what remains is an empty black panel labelling
+   itself — a third of a screen of dead height either way, pushing the station
+   list, the thing people came for, below the fold.
+
+   `display: none` rather than a height transition on purpose: start() adds
+   `is-on` and measures the stage in the same tick, and a stage still animating
+   open would be measured mid-transition and size the canvas to whatever
+   fraction of itself it had reached. place() clears `is-background` before it
+   calls fit() for the same reason, so coming back from the backdrop measures a
+   stage that is already open.
+
+   NO WEBGL keeps its panel, because that message has nowhere else to live. */
+.vis-deck:not(.is-on) .vis-stage,
+.vis-deck.is-background .vis-stage { display: none; }
+.vis-deck.is-failed .vis-stage { display: block; }
 
 /* the dark screen says what it is waiting for, rather than being a black hole */
 .vis-stage::after {
@@ -1038,11 +1046,8 @@
   pointer-events: none;
   transition: opacity 0.3s;
 }
-.is-on .vis-stage::after,
-.is-background .vis-stage::after { opacity: 0; }
-.is-background .vis-stage::after { content: "RUNNING AS THE BACKDROP"; opacity: 0.75; }
-.is-on.is-background .vis-stage::after { opacity: 0.75; }
-.is-failed .vis-stage::after { content: "NO WEBGL"; }
+.is-on .vis-stage::after { opacity: 0; }
+.is-failed .vis-stage::after { content: "NO WEBGL"; opacity: 1; }
 
 .vis-console {
   display: grid;

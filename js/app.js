@@ -234,6 +234,44 @@
     el.needle.style.left = ((freq - 88) / 20 * 100).toFixed(2) + '%';
   }
 
+  /* ------------------------------------------------------------- autoplay */
+
+  /* `play=auto` in the link says the person who made it wanted sound, which is
+   * not the same as the browser agreeing: a page nobody has touched yet gets a
+   * NotAllowedError instead of audio. On the receivers this flag exists for --
+   * a cast target, a kiosk browser -- there is usually no such policy and the
+   * first attempt simply plays. Everywhere else the request is kept alive and
+   * honoured on the first gesture the page sees, rather than dropped. */
+  var autoplayWanted = false;
+  var autoplayArmed = false;
+  var pendingAutoScan = false;
+
+  function armAutoplayRetry() {
+    if (autoplayArmed) return;
+    autoplayArmed = true;
+    document.addEventListener('pointerdown', onFirstGesture, true);
+    document.addEventListener('keydown', onFirstGesture, true);
+  }
+
+  function onFirstGesture(e) {
+    autoplayArmed = false;
+    document.removeEventListener('pointerdown', onFirstGesture, true);
+    document.removeEventListener('keydown', onFirstGesture, true);
+
+    /* A gesture that landed on a control means that control decides -- PLAY,
+     * SCAN, a station row. Anything else (a tap on the chassis, a stray key)
+     * is just the permission the browser was holding out for. */
+    var t = e.target;
+    if (t && t.closest && t.closest('button, a, input, select, label, .st')) return;
+
+    /* Deferred so the app's own handlers go first: if one of them already
+     * started playback -- Space toggling PLAY -- there is nothing left to do,
+     * and starting again here would leave the two fighting over the player. */
+    setTimeout(function () {
+      if (state.current && el.player.paused) start();
+    }, 0);
+  }
+
   /* ------------------------------------------------------------- playback */
 
   var tuneTimer = null;
@@ -249,7 +287,13 @@
     markCurrentRow();
 
     try {
-      history.replaceState(null, '', '#s=' + encodeURIComponent(station.id));
+      /* Carry an autoplay flag that arrived in the hash back into the URL: a
+       * receiver that reloads should come back playing, not sitting on PRESS
+       * PLAY. One that arrived in the query string survives on its own --
+       * replacing only the fragment leaves the rest of the URL alone. */
+      var opt = hashParams().play;
+      history.replaceState(null, '', '#s=' + encodeURIComponent(station.id) +
+        (opt === undefined ? '' : '&play=' + encodeURIComponent(opt || 'auto')));
     } catch (e) { /* file:// can refuse replaceState; the radio still works */ }
 
     /* The hash is for sharing a link; the session is for closing the tab. */
@@ -275,9 +319,17 @@
       p.catch(function (err) {
         // NotAllowedError means the browser wants a user gesture; everything
         // else means the stream itself would not open.
-        failStation(err && err.name === 'NotAllowedError'
-          ? 'PRESS PLAY TO START'
-          : 'STREAM REFUSED — TRY THE ↗ LINK');
+        if (err && err.name === 'NotAllowedError') {
+          // Not this station's fault, so SCAN must not roll on: the next
+          // station would be refused in exactly the same way.
+          state.scanTries = 0;
+          if (autoplayWanted) armAutoplayRetry();
+          failStation(autoplayWanted
+            ? 'AUTOPLAY BLOCKED — TAP ANYWHERE TO START'
+            : 'PRESS PLAY TO START');
+          return;
+        }
+        failStation('STREAM REFUSED — TRY THE ↗ LINK');
       });
     }
   }
@@ -488,6 +540,7 @@
           state.pool = rows.map(adopt).filter(Boolean);
           state.liveBusy = false;
           applyFilters();
+          flushAutoScan();
         })
         .catch(function () {
           state.liveBusy = false;
@@ -496,6 +549,7 @@
           state.pool = CATALOG.stations;
           applyFilters();
           el.count.textContent = 'LIVE SEARCH UNREACHABLE — USING BUILT-IN CATALOG';
+          flushAutoScan();
         });
     }, 260);
   }
@@ -606,11 +660,56 @@
     return false;
   }
 
+  /* ----------------------------------------------------------------- url */
+
+  /* The hash carries the station (`#s=<id>`) and may carry options beside it.
+   * They are read the same way whether they were joined with an `&` or a `?`:
+   * `#s=<id>?play=auto` is what a person actually types when appending an
+   * option to a link they were handed, and a link that has to survive being
+   * pasted into a cast dialog is no place to be pedantic about which
+   * separator a fragment is supposed to use. */
+  function hashParams() {
+    var out = {};
+    (location.hash || '').replace(/^#/, '').split(/[?&]/).forEach(function (pair) {
+      if (!pair) return;
+      var eq = pair.indexOf('=');
+      var k = eq === -1 ? pair : pair.slice(0, eq);
+      var v = eq === -1 ? '' : pair.slice(eq + 1);
+      try { out[decodeURIComponent(k)] = decodeURIComponent(v); }
+      catch (e) { out[k] = v; }   // a stray % is not worth losing the link over
+    });
+    return out;
+  }
+
+  /* Either side of the '#': `?play=auto` before it, `play=auto` inside it. */
+  function urlParam(name) {
+    var inHash = hashParams()[name];
+    if (inHash !== undefined) return inHash;
+    try { return new URLSearchParams(location.search).get(name); } catch (e) { return null; }
+  }
+
+  /* `auto` is the documented spelling; the others are what people type when
+   * they are guessing, and a bare `play` with no value counts too. */
+  var AUTOPLAY_WORDS = { auto: 1, '1': 1, 'true': 1, yes: 1, on: 1, '': 1 };
+
+  function autoplayRequested() {
+    var v = urlParam('play');
+    return v != null && AUTOPLAY_WORDS[String(v).toLowerCase()] === 1;
+  }
+
   function stationFromHash() {
-    var m = /[#&]s=([^&]+)/.exec(location.hash || '');
-    if (!m) return null;
-    var id = decodeURIComponent(m[1]);
+    var id = hashParams().s;
+    if (!id) return null;
     return CATALOG.stations.filter(function (s) { return s.id === id; })[0] || null;
+  }
+
+  /* A `play=auto` link that names no station wants the machine to pick one --
+   * which is SCAN. In live mode the pool is still on its way from the network
+   * when boot finishes, so the scan waits for it to land. */
+  function flushAutoScan() {
+    if (!pendingAutoScan) return;
+    pendingAutoScan = false;
+    scanWithRetries();
   }
 
   function wire() {
@@ -723,14 +822,20 @@
 
     autosave = RADIO_SAVE.autosave(sessionSnapshot);
 
+    autoplayWanted = autoplayRequested();
+
     /* A link that names a station beats the session: someone opening a
      * shared #s= link wants that station, not the one they left. */
     var station = stationFromHash() || last;
     if (station) {
-      /* Cued, never played: a browser refuses audio without a gesture, and
-       * a tab that starts making noise on its own is a bad neighbour. */
-      tune(station, false);
-      el.lcdMeta.textContent = 'PRESS PLAY';
+      /* Cued, never played -- unless the link asked for sound. A tab that
+       * starts making noise on its own is a bad neighbour; a link that says
+       * `play=auto` is someone asking for exactly that, on purpose. */
+      tune(station, autoplayWanted);
+      if (!autoplayWanted) el.lcdMeta.textContent = 'PRESS PLAY';
+    } else if (autoplayWanted) {
+      if (state.live) pendingAutoScan = true;   // wait for the network pool
+      else scanWithRetries();
     } else {
       setMode('STOP');
       el.lcdQuality.textContent = CATALOG.count.toLocaleString() + ' STATIONS';

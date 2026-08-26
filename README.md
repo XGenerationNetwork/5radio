@@ -23,6 +23,9 @@ no server required.
   even an unplayable stream is still a usable suggestion.
 - **Shareable** — tuning a station puts it in the URL (`#s=<id>`). Send that
   link and it opens cued to that station.
+- **Or opens playing** — add `play=auto` and the link starts the stream by
+  itself, for casting to a speaker or a screen that nobody is going to walk
+  over and press PLAY on. See [Link options](#link-options).
 - **Remembers where you left it** — close the tab and come back and the same
   station is on the dial, at the same volume, with the same genre, region,
   search and sort still set. It is cued rather than playing, because a
@@ -31,6 +34,56 @@ no server required.
 
 Keyboard: <kbd>Space</kbd> play/pause · <kbd>R</kbd> random · <kbd>←</kbd>
 <kbd>→</kbd> previous/next · <kbd>S</kbd> stop.
+
+---
+
+## Link options
+
+A link can name a station and say what to do with it.
+
+| | |
+|---|---|
+| `#s=<id>` | open cued to that station |
+| `play=auto` | and start it playing |
+
+```
+https://5radio.org/#s=09902861-999f-4a6e-915b-3692401aee84?play=auto
+https://5radio.org/#s=09902861-999f-4a6e-915b-3692401aee84&play=auto
+https://5radio.org/?play=auto#s=09902861-999f-4a6e-915b-3692401aee84
+```
+
+All three are the same link. `play=auto` is read from the query string or from
+the hash, joined with either `?` or `&` — `?` inside the fragment is not what
+the URL spec had in mind, but it is what a person types when appending an
+option to a link they were handed, and a link that has to survive a cast dialog
+is no place to be pedantic. `1`, `true`, `yes`, `on` and a bare `play` work
+as well; anything else (`play=no`) is ignored and the station stays cued.
+
+**`play=auto` on its own, naming no station, hits SCAN** — a random station
+from whatever the filters allow, rolling past dead streams the way SCAN always
+does. `?genre=…`-style filters are not a thing; the filters come from the
+saved session on the device that opens the link.
+
+Once tuned, the flag is written back into the address bar alongside the
+station, so a receiver that reloads the page comes back playing rather than
+sitting on PRESS PLAY.
+
+### When the browser says no
+
+Autoplay is a permission, not a setting. A cast receiver or a kiosk browser
+generally grants it — that is the case this flag exists for — but an ordinary
+browser refuses audio on a page nobody has touched yet, and hands back a
+`NotAllowedError`.
+
+The request is not thrown away when that happens. The display says **AUTOPLAY
+BLOCKED — TAP ANYWHERE TO START**, the station stays on the dial, and the first
+tap or keypress anywhere on the page starts it. A gesture that lands on a
+control instead — PLAY, SCAN, a station in the rack — is left to that control,
+so pressing PLAY plays rather than toggling twice and stopping.
+
+A refusal is also not counted against SCAN: the browser turning down a gesture
+says nothing about the stream, and the next station would be refused in exactly
+the same way, so SCAN holds still instead of burning through four stations.
 
 ---
 

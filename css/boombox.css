@@ -1072,11 +1072,17 @@
 
 /* ── home two: behind the whole page ── */
 
+/* Nothing but a position for the canvas to sit in, and **no background of its
+   own** — that matters more than it looks. A background on <body> is painted
+   onto the viewport canvas, which sits behind even negative z-index elements,
+   so any colour here covers the page's neon grid permanently, in every mode,
+   whether the visual is running or not. It had `background: #05060a` at first
+   and the grid simply vanished from the whole site. The opaque ground the
+   screen blend needs is given below, and only while the backdrop is on. */
 .vis-back {
   position: fixed;
   inset: 0;
   z-index: -2;
-  background: #05060a;
   pointer-events: none;
 }
 .vis-back .vis-canvas { width: 100%; height: 100%; }

@@ -26,6 +26,9 @@ no server required.
 - **Or opens playing** — add `play=auto` and the link starts the stream by
   itself, for casting to a speaker or a screen that nobody is going to walk
   over and press PLAY on. See [Link options](#link-options).
+- **Casts to a television** — the CAST key under the machine hands a Chromecast
+  the address of the station on the dial, with `play=auto` on the end. The TV
+  loads its own 5RADIO and tunes itself. See [Casting](#casting-to-a-television).
 - **Remembers where you left it** — close the tab and come back and the same
   station is on the dial, at the same volume, with the same genre, region,
   search and sort still set. It is cued rather than playing, because a
@@ -67,6 +70,62 @@ saved session on the device that opens the link.
 Once tuned, the flag is written back into the address bar alongside the
 station, so a receiver that reloads the page comes back playing rather than
 sitting on PRESS PLAY.
+
+### Casting to a television
+
+The row under the boombox is a second, shallower chassis — same case, same
+keys — with three controls: **CAST**, **ADDRESS** and **MIRROR**.
+
+CAST is the `play=auto` link with a device picker in front of it. Pressing it
+raises Chrome's own Chromecast list; picking a television hands that television
+`https://<your 5radio>/#s=<the station on the dial>&play=auto`, and the TV
+loads it, tunes that station and plays it. The readout under the key says which
+station is about to be sent, and changes as you press NEXT.
+
+**The television runs its own copy.** It is not mirroring this tab and not
+relaying audio through this computer — the TV holds its own connection to the
+broadcaster. So the laptop can be closed, or the tab shut, and the music keeps
+playing. Stopping it is the same key, which reads STOP while a cast is live.
+
+This is the [Presentation API][pres] — `new PresentationRequest([url]).start()` —
+which is the one kind of casting a web page is allowed to start for itself. It
+comes with rules the panel enforces and explains rather than failing quietly:
+
+| Rule | Why |
+|---|---|
+| Chrome, Edge, or another Chromium browser | Firefox and Safari have no Presentation API |
+| **https**, and not `localhost` | the address goes to a *different machine* — a TV cannot reach your laptop's localhost, and Chrome will not hand a television a plain http page |
+| not `file://` | that is not an address at all |
+
+Which is what **ADDRESS** is for: developing on `localhost:5173` you can still
+point the television at your deployed 5RADIO, and the key will work from the
+copy in front of you. A pasted address is normalised — a bare host gets
+`https://`, and a `#s=…` left on the end from a shared link is stripped, since
+that is where the station goes.
+
+Two things the panel will tell you about rather than let you discover:
+
+- **No station on the dial** casts `?play=auto` on its own, which is SCAN — the
+  television picks one and starts.
+- **A station tuned from LIVE SEARCH** is not in `data/stations.js`, and the TV
+  is loading its own copy with its own catalog, so it cannot look that id up.
+  It scans instead. The readout says so before you press anything.
+
+**MIRROR** explains the other kind of casting, the one no page may start. Chrome's
+*Cast tab* throws this exact tab — this audio, these meters — at the television,
+and there is deliberately no API for it: a page that could start screen-sharing
+itself would be a gift to every bad advert on the web. So the dialog says where
+Chrome and Edge keep it instead of pretending to offer it.
+
+`js/cast.js` is a port of 5OS's `js/core/cast.js` with the OS around it taken
+away and one thing added — the address carries the station. Its diagnostics are
+the original's, in the original's order: every reason casting cannot work right
+now, each one saying what to do about it, because "casting unavailable" helps
+nobody.
+
+[pres]: https://www.w3.org/TR/presentation-api/
+
+---
 
 ### When the browser says no
 
@@ -130,6 +189,7 @@ css/layout.css        page, filter panel, station rack
 js/taxonomy.js        genre + region classifier, shared by the page and the tools
 js/save.js            the session — what is on the dial, kept in localStorage
 js/app.js             filtering, tuning, playback, live search
+js/cast.js            the CAST row — hands a television the play=auto link
 js/osbridge.js        lets 5OS's on-screen keyboard type into this page
 data/stations.js      the catalog as a <script>  ← what the page loads
 data/stations.json    the same catalog as JSON   ← what the tools read

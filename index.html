@@ -152,6 +152,40 @@
   </div>
 </section>
 
+<!-- ═══════════════════════════ CAST TO A TV ═══════════════════════════ -->
+<section class="cast-deck" id="castDeck" aria-label="Cast to a television">
+  <div class="cast-chassis">
+
+    <div class="cast-strip" aria-hidden="true">
+      <span class="cast-badge">OUTPUT <em>TV</em></span>
+      <span class="cast-vents"></span>
+      <span class="cast-lamp" id="castLamp" title="Cast"></span>
+    </div>
+
+    <div class="cast-console">
+      <button class="key key-cast" id="btnCast" type="button">
+        <span class="glyph" id="castGlyph"></span>
+        <span class="key-lab" id="castLab">CAST</span>
+      </button>
+
+      <div class="cast-readout">
+        <div class="cast-line" id="castLine" role="status" aria-live="polite">CAST TO A TELEVISION</div>
+        <div class="cast-sub" id="castSub"></div>
+      </div>
+
+      <div class="cast-keys">
+        <button class="key key-sm" id="btnCastAddr" type="button" title="Set the address the television loads">
+          <span class="glyph">⚙</span><span class="key-lab">ADDRESS</span>
+        </button>
+        <button class="key key-sm" id="btnCastHelp" type="button" title="Mirror this tab instead">
+          <span class="glyph">🪞</span><span class="key-lab">MIRROR</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</section>
+
 <!-- ═══════════════════════════ FILTERS / DIAL ═══════════════════════════ -->
 <section class="dial-panel" id="dial" aria-label="Find stations">
   <div class="dial-grid">
@@ -242,6 +276,7 @@
 <script src="js/taxonomy.js"></script>
 <script src="js/save.js"></script>
 <script src="js/app.js"></script>
+<script src="js/cast.js"></script>
 <script src="js/osbridge.js"></script>
 </body>
 </html>

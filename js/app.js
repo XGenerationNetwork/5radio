@@ -337,6 +337,12 @@
     /* The hash is for sharing a link; the session is for closing the tab. */
     saveNow();
 
+    /* js/cast.js builds the television's URL out of whatever is on the dial,
+     * and `replaceState` fires no event of its own, so the dial says so. */
+    try {
+      window.dispatchEvent(new CustomEvent('5radio:tuned', { detail: { station: station } }));
+    } catch (e) { /* an old browser without CustomEvent still plays radio */ }
+
     el.player.src = station.url;
     if (autoplay) start();
     else setMode('STOP');
@@ -892,6 +898,14 @@
       el.lcdQuality.textContent = CATALOG.count.toLocaleString() + ' STATIONS';
     }
   }
+
+  /* The one thing outside this file needs to know. A listener alone would not
+     do: when the document has already finished loading, init() runs while this
+     script is still being parsed, so the first tune is announced before
+     js/cast.js exists to hear it. */
+  window.RADIO_APP = {
+    current: function () { return state.current; }
+  };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

@@ -769,3 +769,183 @@
   }
   .needle { transition: none; }
 }
+
+
+/* ══════════════════════════════ CAST DECK ══════════════════════════════
+   A second, shallower chassis under the boombox: same case gradients, same
+   keys, same LCD ink, so it reads as part of the same machine rather than a
+   web control that wandered in. It is a strip rather than a box because the
+   boombox is the thing on the shelf and this is the socket panel on its back.
+   ====================================================================== */
+
+.cast-deck {
+  /* the same 1020px column the dial panel and the rack stand in, so the
+     three of them line up under the machine */
+  width: min(100%, 1020px);
+  margin: clamp(10px, 2vw, 24px) auto 0;
+}
+
+.cast-chassis {
+  border-radius: calc(var(--u) * 1.2);
+  padding: calc(var(--u) * 0.85) calc(var(--u) * 1);
+  background: linear-gradient(180deg, var(--case-1) 0%, var(--case-2) 42%, var(--case-3) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.5),
+    inset 0 calc(var(--u) * -0.9) calc(var(--u) * 1.2) rgba(0, 0, 0, 0.4),
+    0 calc(var(--u) * 0.7) 0 #0a0b0d;
+}
+
+.cast-strip {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.8);
+  padding-bottom: calc(var(--u) * 0.7);
+}
+.cast-badge {
+  font: 700 calc(var(--u) * 0.8) / 1 ui-monospace, "Consolas", monospace;
+  letter-spacing: 0.16em;
+  color: var(--silver-2);
+  text-shadow: 0 1px 0 #000;
+  white-space: nowrap;
+}
+.cast-badge em { font-style: normal; color: var(--cyan); letter-spacing: 0.22em; }
+.cast-vents {
+  flex: 1;
+  height: calc(var(--u) * 0.7);
+  border-radius: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.55) 0 2px,
+    rgba(255, 255, 255, 0.05) 2px 5px
+  );
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.6);
+}
+.cast-lamp {
+  width: calc(var(--u) * 0.62);
+  height: calc(var(--u) * 0.62);
+  border-radius: 50%;
+  background: #3a1420;
+  box-shadow: inset 0 0 3px #000;
+}
+.is-ready .cast-lamp {
+  background: var(--cyan);
+  box-shadow: 0 0 calc(var(--u) * 0.7) var(--cyan);
+  animation: cast-wink 1.9s ease-in-out infinite;
+}
+.is-casting .cast-lamp {
+  background: var(--lime);
+  box-shadow: 0 0 calc(var(--u) * 0.8) var(--lime);
+}
+@keyframes cast-wink { 50% { opacity: 0.45; } }
+
+.cast-console {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: calc(var(--u) * 0.8);
+}
+
+/* the CAST key: a transport key in the cyan of the output side */
+.key-cast {
+  min-width: calc(var(--u) * 5.2);
+  background: linear-gradient(180deg, #2f7d78 0%, #1d5f5c 46%, #123f3e 100%);
+}
+.key-cast:hover { background: linear-gradient(180deg, #3a9c95, #237571 46%, #16504e); }
+.key-cast .key-lab { color: rgba(230, 255, 252, 0.85); }
+.key-cast[disabled] {
+  cursor: not-allowed;
+  filter: grayscale(0.8) brightness(0.7);
+}
+.key-cast[disabled]:hover { background: linear-gradient(180deg, #2f7d78 0%, #1d5f5c 46%, #123f3e 100%); }
+.is-casting .key-cast {
+  background: linear-gradient(180deg, #ff6f8f 0%, #e42553 46%, #ab1339 100%);
+}
+.is-casting .key-cast:hover { background: linear-gradient(180deg, #ff88a2, #f0335f 46%, #b81742); }
+
+.key-sm { min-width: calc(var(--u) * 4.4); }
+.cast-keys { display: flex; gap: calc(var(--u) * 0.5); }
+
+/* the readout: the LCD's ink, on the case rather than behind glass */
+.cast-readout { min-width: 0; }
+.cast-line {
+  font: 700 calc(var(--u) * 0.82) / 1.2 ui-monospace, "Consolas", monospace;
+  letter-spacing: 0.14em;
+  color: var(--silver-2);
+}
+.cast-line.good { color: var(--lcd-ink); text-shadow: 0 0 calc(var(--u) * 0.5) rgba(77, 255, 216, 0.4); }
+.cast-line.warn { color: var(--amber); }
+.cast-sub {
+  margin-top: calc(var(--u) * 0.28);
+  font-size: calc(var(--u) * 0.78);
+  line-height: 1.45;
+  color: #8b929b;
+}
+
+@media (max-width: 780px) {
+  .cast-console { grid-template-columns: auto 1fr; }
+  .cast-keys { grid-column: 1 / -1; justify-content: flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-ready .cast-lamp { animation: none !important; }
+}
+
+/* ── the two dialogs ── */
+
+.cast-dialog {
+  width: min(560px, calc(100vw - 32px));
+  border: 0;
+  border-radius: 12px;
+  padding: 18px 20px 16px;
+  color: #d8dce2;
+  background: linear-gradient(180deg, #23252a 0%, #191b1f 100%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 24px 60px rgba(0, 0, 0, 0.7);
+}
+.cast-dialog::backdrop { background: rgba(0, 0, 0, 0.62); }
+.cast-dialog h3 {
+  margin: 0 0 10px;
+  font: 700 13px / 1 ui-monospace, "Consolas", monospace;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+.cast-dialog h4 {
+  margin: 14px 0 4px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: #e7e9ec;
+}
+.cast-dialog-body { font-size: 13px; line-height: 1.55; }
+.cast-dialog-body p { margin: 0 0 9px; }
+.cast-dialog-body ol,
+.cast-dialog-body ul { margin: 6px 0; padding-left: 20px; }
+.cast-dialog-body li { margin: 3px 0; }
+.cast-dialog-note {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: #9aa1aa;
+  background: rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+.cast-dialog-note p:last-child { margin-bottom: 0; }
+.cast-input {
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 9px 11px;
+  border: 0;
+  border-radius: 7px;
+  font: 500 13px / 1.2 ui-monospace, "Consolas", monospace;
+  color: var(--lcd-ink);
+  background: var(--lcd-bg);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+}
+.cast-input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
+.cast-dialog-keys {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}

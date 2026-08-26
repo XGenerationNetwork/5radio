@@ -245,6 +245,18 @@ a rule tweak costs a second instead of a sixteen-minute rebuild.
 
 ## Notes
 
+- **The machine moves when the audio does.** The cones, woofers, reels,
+  antenna, STEREO flicker and VU meters all hang off one class, and that class
+  means exactly one thing: the `<audio>` element is engaged and holding data
+  (`readyState >= 3`). It used to mean "a `playing` event arrived", which is a
+  narrower claim — it left the boombox still through the tuning gap and every
+  rebuffer, and any path that never fired that one event left it still for
+  good. Asking the element directly needs nothing armed and has no event to
+  miss: a stall stops the machine, the recovery starts it again, and the frame
+  loop promotes the display to PLAY if the event was late or never came. Brief
+  `readyState` dips are coasted through for 600ms so a hiccup doesn't read as
+  a fault; letting go of the transport — pause, STOP, a dead stream — stops
+  everything at once.
 - **The VU meters are decorative.** Reading real audio levels needs an
   `AnalyserNode`, which needs `crossOrigin="anonymous"` on the `<audio>`
   element, and almost no station sends the CORS headers that would then require.

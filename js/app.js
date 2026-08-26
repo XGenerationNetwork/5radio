@@ -204,7 +204,6 @@
 
   function setMode(mode) {
     el.lcdMode.textContent = mode;
-    el.boombox.classList.toggle('is-playing', mode === 'PLAY');
     el.boombox.classList.toggle('is-tuning', mode === 'TUNE');
     el.boombox.classList.toggle('is-error', mode === 'FAIL');
     var playing = mode === 'PLAY';
@@ -212,6 +211,45 @@
     el.playLab.textContent = playing ? 'PAUSE' : 'PLAY';
     el.btnPlay.classList.toggle('on', playing);
     el.btnPlay.setAttribute('aria-pressed', String(playing));
+    syncMotion();
+  }
+
+  /* ---------------------------------------------------------- the motion */
+
+  /* Every moving part -- cones, woofers, reels, antenna, the STEREO flicker,
+   * the VU meters -- hangs off `is-playing`, and `is-playing` means one thing:
+   * audio is moving right now. It used to mean "a `playing` event arrived",
+   * which is a different claim: it left the machine still during the tuning
+   * gap and through every rebuffer, and any path that never produced that one
+   * event -- an autoplayed link among them -- left it still for good.
+   *
+   * Asking the element itself needs nothing armed and has no event to miss.
+   * A stall stops the machine and the recovery starts it again by itself. */
+  function audioEngaged() {
+    var p = el.player;
+    return !!p.currentSrc && !p.paused && !p.ended;
+  }
+
+  function audioFlowing() {
+    return audioEngaged() && el.player.readyState >= 3;   // HAVE_FUTURE_DATA
+  }
+
+  /* A rebuffer can flick readyState down for a few frames. Dropping every
+   * moving part for that long reads as a fault rather than a hiccup, so the
+   * machine coasts a little before it stops; letting go of the transport
+   * altogether -- pause, STOP, a stream that died -- stops it at once. */
+  var MOTION_COAST_MS = 600;
+  var coastUntil = 0;
+
+  function syncMotion(now) {
+    now = now === undefined ? performance.now() : now;
+    var on;
+    if (!audioEngaged()) { coastUntil = 0; on = false; }
+    else if (audioFlowing()) { coastUntil = now + MOTION_COAST_MS; on = true; }
+    else on = now < coastUntil;
+
+    el.boombox.classList.toggle('is-playing', on);
+    return on;
   }
 
   /* Scroll the station name only when it genuinely overflows the display. */
@@ -412,6 +450,20 @@
     scan();
   }
 
+  /* The display caught up with the audio: the stream is through, so whatever
+   * the machine was doing before -- tuning, or reporting a stream that would
+   * not open -- is over. Reached from the `playing` event, and from the frame
+   * loop when that event was late or never came. */
+  function showPlaying() {
+    clearTuneTimer();
+    state.scanTries = 0;
+    setMode('PLAY');
+    if (state.current) {
+      el.lcdQuality.textContent = qualityOf(state.current);
+      el.lcdMeta.textContent = (state.current.genre + ' · ' + placeOf(state.current)).toUpperCase();
+    }
+  }
+
   /* ------------------------------------------------------------ VU meters */
 
   /* These are driven by a random walk, not by the audio itself. Reading real
@@ -442,7 +494,14 @@
     if (now - vuTick < 60) return;   // ~16fps is plenty for LED segments
     vuTick = now;
 
-    var playing = !el.player.paused && el.boombox.classList.contains('is-playing');
+    /* One answer for the whole machine: the CSS animations through the class,
+     * the LED meters through the return value. They cannot disagree. */
+    var playing = syncMotion(now);
+
+    /* Audio moving while the display still reads TUNE (or FAIL) means the
+     * `playing` event was late or never arrived. Believe the audio. */
+    if (playing && el.lcdMode.textContent !== 'PLAY' && audioFlowing()) showPlaying();
+
     ['L', 'R'].forEach(function (ch) {
       var target = playing ? 5 + Math.random() * 11 : 0;
       vuLevel[ch] += (target - vuLevel[ch]) * (target > vuLevel[ch] ? 0.65 : 0.22);
@@ -756,15 +815,7 @@
     el.volume.addEventListener('input', function () { setVolume(Number(el.volume.value)); });
 
     /* audio element -> display */
-    el.player.addEventListener('playing', function () {
-      clearTuneTimer();
-      state.scanTries = 0;
-      setMode('PLAY');
-      if (state.current) {
-        el.lcdQuality.textContent = qualityOf(state.current);
-        el.lcdMeta.textContent = (state.current.genre + ' · ' + placeOf(state.current)).toUpperCase();
-      }
-    });
+    el.player.addEventListener('playing', showPlaying);
     el.player.addEventListener('waiting', function () {
       if (!el.player.paused) el.lcdQuality.textContent = 'BUFFERING…';
     });

@@ -64,7 +64,7 @@
   var player = null;          /* the radio's own element. Never touched. */
   var wanted = false;
   var meter = null;
-  var live = false;           /* is the probe actually feeding the analyser? */
+  var corsOk = false;         /* did the stream come back at all? */
 
   /* Stations whose stream refused CORS. Remembered for the session so one is
      not made to fail twice. */
@@ -78,7 +78,14 @@
   A.attach = function (el) { player = el; };
 
   A.wanted = function () { return wanted; };
-  A.real = function () { return !!(live && analyser && ctx && ctx.state === 'running'); };
+  /* "Real" is not a flag someone set once; it is whether audio is moving
+     through the analyser right now. Derived, so it heals itself: the probe
+     may load while the page is still untouched and only start when the radio
+     does, and the readout should follow that rather than latch. */
+  A.real = function () {
+    return !!(corsOk && analyser && ctx && ctx.state === 'running' &&
+              probe && !probe.paused && probe.readyState >= 2);
+  };
   A.deafTo = function (station) { return !!(station && deaf[station.id]); };
 
   /* ------------------------------------------------------------------ */
@@ -130,8 +137,18 @@
     }
   }
 
-  /* Point the probe at a station. Answers whether it took — and a refusal is
-     completely inert, because nothing here is in the radio's signal path. */
+  /* Point the probe at a station. Answers whether the *stream* will be read —
+     which is a different question from whether it is being read this second,
+     and conflating the two was a real bug: on a page nobody has touched yet
+     `probe.play()` is refused with NotAllowedError exactly as the radio's own
+     element is, and reporting that as "this station will not allow its audio
+     to be read" blamed the broadcaster for the browser's autoplay policy, then
+     never recovered when playback finally started.
+
+     So the verdict comes from whether *data arrives* — `loadeddata` means the
+     bytes came back and CORS was satisfied — and never from whether playback
+     began. Only a genuine `error` marks a station unreadable. Getting the
+     sound moving afterwards is `follow()`'s job. */
   function watch(station) {
     if (!station || !station.url) return Promise.resolve(false);
     if (deaf[station.id]) return Promise.resolve(false);
@@ -142,10 +159,12 @@
       function done(ok) {
         if (settled) return;
         settled = true;
-        probe.removeEventListener('playing', good);
+        ['playing', 'loadeddata', 'canplay'].forEach(function (t) {
+          probe.removeEventListener(t, good);
+        });
         probe.removeEventListener('error', bad);
         clearTimeout(timer);
-        live = ok;
+        corsOk = ok;
         resolve(ok);
       }
       function good() { done(true); }
@@ -157,17 +176,22 @@
         done(false);
       }
 
-      probe.addEventListener('playing', good);
+      ['playing', 'loadeddata', 'canplay'].forEach(function (t) {
+        probe.addEventListener(t, good);
+      });
       probe.addEventListener('error', bad);
-      var timer = setTimeout(function () { done(probe.readyState >= 3); }, 9000);
+      var timer = setTimeout(function () { done(probe.readyState >= 2); }, 9000);
 
       probe.src = station.url;
-      probe.play().catch(function () { done(false); });
+      /* A refusal here is "not yet", not "cannot": no gesture has been given.
+         The data still arrives, `loadeddata` still fires, and follow() starts
+         the sound the moment the radio itself is playing. */
+      probe.play().catch(function () { /* waiting on a gesture */ });
     });
   }
 
   function hush() {
-    live = false;
+    corsOk = false;
     if (!probe) return;
     try { probe.pause(); probe.removeAttribute('src'); probe.load(); } catch (e) {}
   }

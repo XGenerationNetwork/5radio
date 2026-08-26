@@ -172,7 +172,19 @@ headers. Confirmed in a browser rather than just in curl — eight stations spre
 across the catalog, eight with real spectra.
 
 So the readout says **REACTING** when it is watching the real stream and
-**PATTERN** when it is not, and the BPM next to it is measured. Beat detection
+**PATTERN** when it is not, and the BPM next to it is measured.
+
+**PATTERN has three different causes and says which**, because the first
+version did not and that was a bug worth remembering. A probe element is
+refused autoplay by exactly the same policy the radio is, so on a page nobody
+has touched yet `probe.play()` throws `NotAllowedError` — and reporting that
+as "this station will not allow its audio to be read" blamed the broadcaster
+for the browser, then never recovered when Play was finally pressed. The
+verdict now comes from whether the *bytes* arrive (`loadeddata` means CORS was
+satisfied), never from whether playback began, and `real` is derived every
+frame rather than latched once — so it corrects itself the moment the music
+starts. The three sentences are "Press PLAY and the picture will follow the
+music", "Listening for the stream…", and the genuine refusal. Beat detection
 is 5OS's, including the one hard-won piece: onsets come from **spectral flux**,
 not energy over a running average. Broadcast audio is compressed flat, so the
 kick arrives as a rising edge on a high plateau rather than a spike out of

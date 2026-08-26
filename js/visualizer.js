@@ -127,8 +127,24 @@
     el.source.className = 'vis-tag' + (real ? ' good' : '');
     el.source.title = real
       ? 'Reading the stream itself through an AnalyserNode'
-      : 'This station will not allow its audio to be read, so the visual runs on a synthesised drive';
+      : 'Not reading the stream — the picture is running on a synthesised drive';
     el.bpm.textContent = real && a.bpm ? Math.round(a.bpm) + ' BPM' : '';
+    el.sub.textContent = why(real);
+  }
+
+  /* There are three reasons the picture might not be reacting, and they want
+     three different sentences. Saying "this station will not allow it" when the
+     truth is "nothing is playing yet" blames the broadcaster for the browser,
+     and sends someone hunting for a fault that is not there. Derived every
+     frame rather than set once, so it corrects itself the moment Play is
+     pressed. */
+  function why(real) {
+    if (real) return 'Reading the stream directly. Beats come from spectral flux, which is what works on broadcast audio.';
+    if (RADIO_AUDIO.deafTo(currentStation())) {
+      return 'This station will not let its audio be read, so the picture runs on a synthesised drive.';
+    }
+    if (el.player.paused) return 'Press PLAY and the picture will follow the music.';
+    return 'Listening for the stream…';
   }
 
   /* ------------------------------------------------------------------ */
@@ -163,11 +179,7 @@
        refetched under CORS to find out — and either way the visual is already
        running by then, on whichever drive it turns out to have. */
     RADIO_AUDIO.kick();
-    RADIO_AUDIO.enable(currentStation()).then(function (ok) {
-      el.sub.textContent = ok
-        ? 'Reading the stream directly. Beats come from spectral flux, which is what works on broadcast audio.'
-        : 'This station will not let its audio be read, so the picture runs on a synthesised drive.';
-    });
+    RADIO_AUDIO.enable(currentStation());   /* the readout says how it went */
 
     lastAt = 0;
     if (!raf) raf = requestAnimationFrame(frame);
@@ -339,11 +351,7 @@
        CORS again or the analyser goes quiet halfway through the evening. */
     window.addEventListener('5radio:tuned', function (e) {
       if (!running) return;
-      RADIO_AUDIO.retune(e.detail && e.detail.station).then(function (ok) {
-        el.sub.textContent = ok
-          ? 'Reading the stream directly.'
-          : 'This station will not let its audio be read, so the picture runs on a synthesised drive.';
-      });
+      RADIO_AUDIO.retune(e.detail && e.detail.station);
     });
 
     /* Any gesture is a chance to get a suspended AudioContext going. */

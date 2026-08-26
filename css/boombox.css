@@ -1015,6 +1015,16 @@
 }
 .vis-canvas { display: block; width: 100%; height: 100%; }
 
+/* Collapsed until there is something to show. An idle 16:7 black panel is a
+   third of a screen of dead height between the machine and the station list,
+   and it pushes the thing people actually came for below the fold. `display:
+   none` rather than a height transition on purpose: start() adds `is-on` and
+   measures the stage in the same tick, and a stage still animating open would
+   be measured mid-transition and size the canvas to whatever fraction of
+   itself it had reached. NO WEBGL keeps its panel, because that message has
+   nowhere else to live. */
+.vis-deck:not(.is-on):not(.is-failed) .vis-stage { display: none; }
+
 /* the dark screen says what it is waiting for, rather than being a black hole */
 .vis-stage::after {
   content: "PRESS START";

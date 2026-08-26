@@ -61,9 +61,13 @@
   /* the three homes                                                    */
   /* ------------------------------------------------------------------ */
 
+  /* A stopped visual has no business being the backdrop. The canvas is opaque
+     — cleared to black — so leaving it fixed across the viewport after STOP
+     covers the page's own grid exactly as an empty host div once did. Home
+     depends on running, not just on which mode was chosen. */
   function home() {
     if (document.fullscreenElement) return 'full';
-    return background ? 'back' : 'deck';
+    return (background && running) ? 'back' : 'deck';
   }
 
   function place() {
@@ -203,8 +207,19 @@
     el.deck.classList.remove('is-on');
     el.btnLab.textContent = 'START';
     el.btn.setAttribute('aria-pressed', 'false');
-    document.body.classList.remove('vis-background');
+
+    /* The readout is only true while the loop is running it. Leaving REACTING
+       and a BPM on a stopped visual claims it is watching something. */
+    el.source.textContent = '';
+    el.source.className = 'vis-tag';
+    el.bpm.textContent = '';
+    el.sub.textContent = 'A MilkDrop-style feedback visual, driven by the station you are listening to.';
+
     RADIO_AUDIO.disable();
+
+    /* Put the canvas back in the deck before it is hidden: home() now answers
+       'deck' because running is false, and the stage collapses around it. */
+    place();
     save();
   };
 

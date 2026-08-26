@@ -26,6 +26,9 @@ no server required.
 - **Or opens playing** — add `play=auto` and the link starts the stream by
   itself, for casting to a speaker or a screen that nobody is going to walk
   over and press PLAY on. See [Link options](#link-options).
+- **Has a visualizer** — a MilkDrop-style feedback visual that reacts to the
+  station you are actually listening to. It runs in its own deck, or as the
+  page's background, or filling the screen. See [The visualizer](#the-visualizer).
 - **Casts to a television** — the CAST key under the machine hands a Chromecast
   the address of the station on the dial, with `play=auto` on the end. The TV
   loads its own 5RADIO and tunes itself. See [Casting](#casting-to-a-television).
@@ -74,7 +77,7 @@ sitting on PRESS PLAY.
 ### Casting to a television
 
 The row under the boombox is a second, shallower chassis — same case, same
-keys — with three controls: **CAST**, **ADDRESS** and **MIRROR**.
+keys — with three controls: **CAST**, **VISUAL** and **MIRROR**.
 
 CAST is the `play=auto` link with a device picker in front of it. Pressing it
 raises Chrome's own Chromecast list; picking a television hands that television
@@ -97,11 +100,17 @@ comes with rules the panel enforces and explains rather than failing quietly:
 | **https**, and not `localhost` | the address goes to a *different machine* — a TV cannot reach your laptop's localhost, and Chrome will not hand a television a plain http page |
 | not `file://` | that is not an address at all |
 
-Which is what **ADDRESS** is for: developing on `localhost:5173` you can still
-point the television at your deployed 5RADIO, and the key will work from the
-copy in front of you. A pasted address is normalised — a bare host gets
-`https://`, and a `#s=…` left on the end from a shared link is stripped, since
-that is where the station goes.
+Deployed, none of that needs configuring: the cast address defaults to the
+page's own origin, so on 5radio.org the key simply works. (Developing on
+`localhost:5173` there is nothing a television can reach; `RADIO_CAST.setBase(
+'https://5radio.org/')` from the console aims it at the deployed copy, which is
+what the removed ADDRESS key used to do through a dialog.)
+
+**VISUAL**, on by default, decides what the television actually shows. With it
+on the address carries `view=visual` as well, and the TV opens straight into
+the full-page visualizer with the page furniture faded out — a screen across
+the room is something to look at, and a column of filter controls is not what
+anyone casts a radio for. Turn it off and the TV gets the boombox instead.
 
 Two things the panel will tell you about rather than let you discover:
 
@@ -124,6 +133,100 @@ now, each one saying what to do about it, because "casting unavailable" helps
 nobody.
 
 [pres]: https://www.w3.org/TR/presentation-api/
+
+---
+
+### The visualizer
+
+A third chassis under the cast deck. **START** runs it; `‹` and `›` step
+through ten presets, **CYCLING** stops the 16-second clock, **BACKDROP** moves
+the picture behind the whole page, and **FULL** fills the screen.
+
+It is a port of 5OS's `js/apps/visualizer-milk.js`, itself an homage to Ryan
+Geiss's MilkDrop built from first principles. No MilkDrop code and no `.milk`
+presets are used; the technique is the well-known one — keep the previous frame,
+draw it back through a distorted UV mapping, add this instant's waveform, repeat
+— and the audio steers the warp. Nothing on screen is simulated. The tunnels and
+smoke are one frame being resampled into the next a few thousand times.
+
+**It does not bring three.js with it.** 5RADIO has no dependencies and no build
+step, and keeping that cost nothing: the engine only ever asked three.js for an
+orthographic camera, a quad, two render targets, two shader materials and a line
+strip, which is a plain WebGL program with two framebuffers. The shaders came
+across nearly verbatim — GLSL is GLSL — and the presets came across exactly.
+`js/milkdrop.js` is written in GLSL ES 1.00 with no `#version`, which both
+WebGL1 and WebGL2 accept.
+
+#### It hears the actual station
+
+This is the part that was supposed to be impossible. Both this README and 5OS's
+said the same thing: reading a station's levels needs an `AnalyserNode`, that
+needs `crossOrigin="anonymous"`, and almost no station sends the CORS headers
+that then become mandatory — which is why the VU meters are a knowing fake and
+why 5OS deliberately left 5RADIO off its audio bus.
+
+That stopped being true. `tools/probe-cors.mjs` measures it: of the stations in
+the catalog that answer at all, **~90% send an `Access-Control-Allow-Origin`
+that admits us**, most of them `*`. Radio moved onto CDNs, and CDNs send CORS
+headers. Confirmed in a browser rather than just in curl — eight stations spread
+across the catalog, eight with real spectra.
+
+So the readout says **REACTING** when it is watching the real stream and
+**PATTERN** when it is not, and the BPM next to it is measured. Beat detection
+is 5OS's, including the one hard-won piece: onsets come from **spectral flux**,
+not energy over a running average. Broadcast audio is compressed flat, so the
+kick arrives as a rising edge on a high plateau rather than a spike out of
+quiet, and an energy detector never fires at all. On a live trance station it
+locks 128 BPM at 0.69 confidence within four seconds.
+
+#### Why there are two audio elements
+
+The obvious design routes the radio's own `<audio>` through the analyser. It
+was built that way first, and it is a trap with teeth:
+`createMediaElementSource()` binds an element to the graph **permanently**, and
+a source node whose media is not CORS-clean outputs *silence* by specification.
+
+So the moment that graph exists, the ~10% of stations that refuse CORS play
+silently. Measured on WFMU: the element reported `playing`, `currentTime`
+advanced past a minute, and the waveform was flat 128 — digital silence — while
+the display read PLAY. A radio that lies about playing is far worse than a
+visual that does not react.
+
+The radio's element is therefore never touched. A second element, held at zero
+gain, fetches the same stream purely to be looked at, and it is the only thing
+wired into the graph. A station that refuses CORS fails *there*, inertly, and
+the picture falls back to a synthesised drive labelled PATTERN — the radio never
+notices. The price is the stream being fetched twice while the visual is on
+(~16 KB/s for a 128k station) and the two connections sitting slightly apart on
+the live edge, which a feedback smear does not notice the way a scope would.
+
+(A station that refuses logs a CORS error in the console. That is the browser
+narrating, not a fault: the failure is caught and handled.)
+
+#### Three homes, one canvas
+
+The picture can be in the deck, behind the page, or filling the screen. Building
+an engine per home would mean three GL contexts and three copies of the feedback
+history — and the history *is* the picture, so every move would flash black.
+Instead there is one canvas moved between three parents; the feedback buffer
+never learns it went anywhere. In BACKDROP the page's own ground goes
+transparent and a scrim goes over the visual, or the text stops being readable
+the moment a preset turns bright.
+
+**FULL** uses the Fullscreen API on the stage alone. A page can be refused it by
+permissions policy, in which case it says so — BACKDROP plus the browser's own
+F11 is the route that always works.
+
+`view=visual` in a link — what the CAST key sends a television — opens straight
+into the full-page picture with the furniture faded out. On a TV nothing ever
+moves a mouse, so it stays that way; on a laptop any mouse movement brings the
+page back for a few seconds and Esc leaves cinema for good, because a bare
+canvas with no visible way back reads as a fault rather than a feature.
+
+Cost control: WebGL at full viewport is the most expensive thing this page does,
+so the internal render scale drops to 0.65 above ~1.6 Mpx and 0.5 above ~3.5
+Mpx. This mode is fill-rate bound, so resolution is worth far more than
+anything else.
 
 ---
 
@@ -190,6 +293,9 @@ js/taxonomy.js        genre + region classifier, shared by the page and the tool
 js/save.js            the session — what is on the dial, kept in localStorage
 js/app.js             filtering, tuning, playback, live search
 js/cast.js            the CAST row — hands a television the play=auto link
+js/audio.js           the analyser + beat detector, on a second silent element
+js/milkdrop.js        the MilkDrop-style engine, raw WebGL, no three.js
+js/visualizer.js      the visualizer deck, backdrop, fullscreen and cinema
 js/osbridge.js        lets 5OS's on-screen keyboard type into this page
 data/stations.js      the catalog as a <script>  ← what the page loads
 data/stations.json    the same catalog as JSON   ← what the tools read
@@ -296,6 +402,7 @@ Two shortcuts for everyday work:
 ```bash
 node tools/relabel.mjs          # re-apply taxonomy.js locally, no network
 node tools/audit-streams.mjs 70 # spot-check N random streams
+node tools/probe-cors.mjs 60    # what share of streams a visualizer could read
 ```
 
 After changing a rule in `js/taxonomy.js`, run `relabel` then `check-taxonomy` —
@@ -317,7 +424,13 @@ a rule tweak costs a second instead of a sixteen-minute rebuild.
   `readyState` dips are coasted through for 600ms so a hiccup doesn't read as
   a fault; letting go of the transport — pause, STOP, a dead stream — stops
   everything at once.
-- **The VU meters are decorative.** Reading real audio levels needs an
+- **The VU meters are still decorative**, even though the visualizer proves the
+  levels can now be had for real. Making them honest would mean the boombox
+  running the second audio element all the time rather than only when the
+  visual is on, and a station that refuses CORS would leave the needles dead
+  instead of dancing. Left as they are, deliberately — but the reason below is
+  now only half true, and `tools/probe-cors.mjs` says how half.
+- **The old reason.** Reading real audio levels needs an
   `AnalyserNode`, which needs `crossOrigin="anonymous"` on the `<audio>`
   element, and almost no station sends the CORS headers that would then require.
   Switching it on would silence most of the catalog, so the needles dance for

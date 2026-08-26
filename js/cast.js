@@ -118,15 +118,28 @@
     } catch (e) { return u; }
   }
 
+  /* Whether the television gets the boombox or the visual filling its screen.
+     On by default: a TV across the room is a screen to be looked at, and a
+     page of filter controls is not what anyone casts a radio for. */
+  var sendVisual = true;
+  cast.sendVisual = function () { return sendVisual; };
+  cast.setSendVisual = function (on) {
+    sendVisual = !!on;
+    paint();
+  };
+
   /* What the television is actually sent: the station on the dial, already
-     asking to be played. No station on the dial means no station to name, and
-     `play=auto` on its own is SCAN — the TV picks one and starts. */
+     asking to be played, and — unless VISUAL is off — asking to open straight
+     into the full-page visual. No station on the dial means no station to
+     name, and `play=auto` on its own is SCAN: the TV picks one and starts. */
   cast.target = function () {
     var base = cast.base();
     if (!base) return '';
     var s = station();
-    if (!s) return base + (base.indexOf('?') === -1 ? '?' : '&') + 'play=auto';
-    return base + '#s=' + encodeURIComponent(s.id) + '&play=auto';
+    var tail = sendVisual ? '&view=visual' : '';
+    if (!s) return base + (base.indexOf('?') === -1 ? '?' : '&') + 'play=auto' +
+                  (sendVisual ? '&view=visual' : '');
+    return base + '#s=' + encodeURIComponent(s.id) + '&play=auto' + tail;
   };
 
   function station() {
@@ -329,8 +342,9 @@
         ? 'Send ' + what + ' to the TV — it tunes itself and the sound comes out of the television. '
         : 'Press CAST to pick a television. It loads ' + hostOf(d.url) + ', tunes ' + what +
           ' and plays it. ') +
-      (live ? 'This one came from LIVE SEARCH, so the TV cannot look it up — it will scan instead.'
-            : 'Nothing here is mirrored or relayed; the TV plays it directly.');
+      (live ? 'This one came from LIVE SEARCH, so the TV cannot look it up — it will scan instead. '
+            : 'Nothing here is mirrored or relayed; the TV plays it directly. ') +
+      (sendVisual ? 'It opens full screen in the visualizer.' : 'It opens on the boombox.');
   }
 
   function line(text, tone) {
@@ -482,7 +496,13 @@
       if (connection) cast.stop();
       else cast.start();
     });
-    $('btnCastAddr').addEventListener('click', cast.address);
+    var vis = $('btnCastVisual');
+    vis.classList.toggle('on', sendVisual);
+    vis.addEventListener('click', function () {
+      cast.setSendVisual(!sendVisual);
+      vis.classList.toggle('on', sendVisual);
+      vis.setAttribute('aria-pressed', String(sendVisual));
+    });
     $('btnCastHelp').addEventListener('click', cast.mirror);
 
     /* The address carries the station, so a new station is a new address. */

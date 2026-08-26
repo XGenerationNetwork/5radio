@@ -325,13 +325,20 @@
     markCurrentRow();
 
     try {
-      /* Carry an autoplay flag that arrived in the hash back into the URL: a
-       * receiver that reloads should come back playing, not sitting on PRESS
-       * PLAY. One that arrived in the query string survives on its own --
+      /* Replace the station and keep everything else the link was carrying --
+       * `play=auto`, `view=visual`, whatever gets added later. A receiver that
+       * reloads should come back the way it was sent, and this function has no
+       * business knowing which options belong to which file: naming them one
+       * at a time is how `view=visual` got silently dropped the first time.
+       * An option that arrived in the query string survives on its own --
        * replacing only the fragment leaves the rest of the URL alone. */
-      var opt = hashParams().play;
+      var opts = hashParams();
+      delete opts.s;
+      var tail = Object.keys(opts).map(function (k) {
+        return encodeURIComponent(k) + (opts[k] === '' ? '' : '=' + encodeURIComponent(opts[k]));
+      }).join('&');
       history.replaceState(null, '', '#s=' + encodeURIComponent(station.id) +
-        (opt === undefined ? '' : '&play=' + encodeURIComponent(opt || 'auto')));
+        (tail ? '&' + tail : ''));
     } catch (e) { /* file:// can refuse replaceState; the radio still works */ }
 
     /* The hash is for sharing a link; the session is for closing the tab. */
@@ -904,7 +911,11 @@
      script is still being parsed, so the first tune is announced before
      js/cast.js exists to hear it. */
   window.RADIO_APP = {
-    current: function () { return state.current; }
+    current: function () { return state.current; },
+    /* js/visualizer.js reads `view=visual` the same way this file reads
+       `play=auto`, rather than parsing the URL a second time and getting
+       the '?'-inside-the-fragment case subtly wrong. */
+    urlParam: urlParam
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

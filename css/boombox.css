@@ -949,3 +949,187 @@
   gap: 8px;
   margin-top: 14px;
 }
+
+
+/* ═════════════════════════════ VISUALIZER ═════════════════════════════
+   A third chassis, and the two places the same canvas goes when it leaves it.
+   ===================================================================== */
+
+.vis-deck {
+  width: min(100%, 1020px);
+  margin: clamp(10px, 2vw, 24px) auto 0;
+}
+
+.vis-chassis {
+  border-radius: calc(var(--u) * 1.2);
+  padding: calc(var(--u) * 0.85) calc(var(--u) * 1) calc(var(--u) * 0.95);
+  background: linear-gradient(180deg, var(--case-1) 0%, var(--case-2) 42%, var(--case-3) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.5),
+    inset 0 calc(var(--u) * -0.9) calc(var(--u) * 1.2) rgba(0, 0, 0, 0.4),
+    0 calc(var(--u) * 0.7) 0 #0a0b0d;
+}
+
+.vis-strip {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.8);
+  padding-bottom: calc(var(--u) * 0.7);
+}
+.vis-badge {
+  font: 700 calc(var(--u) * 0.8) / 1 ui-monospace, "Consolas", monospace;
+  letter-spacing: 0.16em;
+  color: var(--silver-2);
+  text-shadow: 0 1px 0 #000;
+  white-space: nowrap;
+}
+.vis-badge em { font-style: normal; color: var(--amber); letter-spacing: 0.22em; }
+.vis-vents {
+  flex: 1;
+  height: calc(var(--u) * 0.7);
+  border-radius: 2px;
+  background: repeating-linear-gradient(90deg, rgba(0,0,0,0.55) 0 2px, rgba(255,255,255,0.05) 2px 5px);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.6);
+}
+.vis-tag,
+.vis-bpm {
+  font: 700 calc(var(--u) * 0.62) / 1 ui-monospace, monospace;
+  letter-spacing: 0.14em;
+  color: var(--silver-3);
+  white-space: nowrap;
+}
+.vis-tag.good { color: var(--lcd-ink); }
+
+/* the screen itself — a recessed panel in the case */
+.vis-stage {
+  position: relative;
+  aspect-ratio: 16 / 7;
+  border-radius: calc(var(--u) * 0.5);
+  overflow: hidden;
+  background: #05060a;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.85),
+    inset 0 2px calc(var(--u) * 1.2) rgba(0, 0, 0, 0.9),
+    0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.vis-canvas { display: block; width: 100%; height: 100%; }
+
+/* the dark screen says what it is waiting for, rather than being a black hole */
+.vis-stage::after {
+  content: "PRESS START";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font: 700 calc(var(--u) * 0.8) / 1 ui-monospace, monospace;
+  letter-spacing: 0.28em;
+  color: rgba(140, 148, 158, 0.5);
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.is-on .vis-stage::after,
+.is-background .vis-stage::after { opacity: 0; }
+.is-background .vis-stage::after { content: "RUNNING AS THE BACKDROP"; opacity: 0.75; }
+.is-on.is-background .vis-stage::after { opacity: 0.75; }
+.is-failed .vis-stage::after { content: "NO WEBGL"; }
+
+.vis-console {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: calc(var(--u) * 0.8);
+  padding-top: calc(var(--u) * 0.8);
+}
+.vis-keys { display: flex; gap: calc(var(--u) * 0.5); flex-wrap: wrap; }
+
+.key-vis {
+  min-width: calc(var(--u) * 5.2);
+  background: linear-gradient(180deg, #6d5aa8 0%, #4b3d7d 46%, #2f2653 100%);
+}
+.key-vis:hover { background: linear-gradient(180deg, #8571c4, #5b4b95 46%, #3a2f66); }
+.key-vis .key-lab { color: rgba(240, 235, 255, 0.85); }
+.is-on .key-vis { background: linear-gradient(180deg, #ff6f8f 0%, #e42553 46%, #ab1339 100%); }
+.is-on .key-vis:hover { background: linear-gradient(180deg, #ff88a2, #f0335f 46%, #b81742); }
+
+.key-sm.on {
+  background: linear-gradient(180deg, #2f7d78 0%, #1d5f5c 46%, #123f3e 100%);
+}
+.key-sm.on .key-lab { color: rgba(230, 255, 252, 0.9); }
+
+.vis-readout { min-width: 0; }
+.vis-preset {
+  font: 700 calc(var(--u) * 0.82) / 1.2 ui-monospace, "Consolas", monospace;
+  letter-spacing: 0.14em;
+  color: var(--lcd-ink);
+}
+.vis-sub {
+  margin-top: calc(var(--u) * 0.28);
+  font-size: calc(var(--u) * 0.78);
+  line-height: 1.45;
+  color: #8b929b;
+}
+
+/* ── home two: behind the whole page ── */
+
+.vis-back {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background: #05060a;
+  pointer-events: none;
+}
+.vis-back .vis-canvas { width: 100%; height: 100%; }
+
+/* The page's own ground goes out of the way, and a scrim goes over the visual
+   so the text on top stays readable when a preset turns bright. */
+body.vis-background { background: transparent; }
+body.vis-background::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: rgba(8, 9, 11, 0.58);
+  pointer-events: none;
+}
+
+/* ── home three: filling the screen ── */
+
+/* Present at viewport size but invisible, because an element that is
+   display:none cannot be made fullscreen. */
+.vis-full {
+  position: fixed;
+  inset: 0;
+  z-index: -5;
+  opacity: 0;
+  pointer-events: none;
+  background: #000;
+}
+.vis-full:fullscreen {
+  z-index: auto;
+  opacity: 1;
+  pointer-events: auto;
+}
+.vis-full:fullscreen .vis-canvas { width: 100vw; height: 100vh; }
+
+/* ── cinema: what a television gets ── */
+
+body.vis-cinema .site-head,
+body.vis-cinema .site-foot,
+body.vis-cinema main {
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+body.vis-cinema.vis-woken .site-head,
+body.vis-cinema.vis-woken .site-foot,
+body.vis-cinema.vis-woken main {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (max-width: 780px) {
+  .vis-console { grid-template-columns: 1fr; }
+  .vis-keys { justify-content: flex-start; }
+  .vis-stage { aspect-ratio: 4 / 3; }
+}

@@ -13,6 +13,10 @@
 
 <a class="skip-link" href="#dial">Skip to the station controls</a>
 
+<!-- the visual's other two homes: behind the page, and filling the screen -->
+<div class="vis-back" id="visBack" aria-hidden="true"></div>
+<div class="vis-full" id="visFull" aria-hidden="true"></div>
+
 <header class="site-head">
   <div class="brand">
     <span class="brand-5">5</span><span class="brand-word">RADIO</span>
@@ -174,11 +178,56 @@
       </div>
 
       <div class="cast-keys">
-        <button class="key key-sm" id="btnCastAddr" type="button" title="Set the address the television loads">
-          <span class="glyph">⚙</span><span class="key-lab">ADDRESS</span>
+        <button class="key key-sm" id="btnCastVisual" type="button" aria-pressed="true" title="Send the visualizer, full screen, instead of the boombox">
+          <span class="glyph">◉</span><span class="key-lab">VISUAL</span>
         </button>
         <button class="key key-sm" id="btnCastHelp" type="button" title="Mirror this tab instead">
           <span class="glyph">🪞</span><span class="key-lab">MIRROR</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════ VISUALIZER ═══════════════════════════ -->
+<section class="vis-deck" id="visDeck" aria-label="Visualizer">
+  <div class="vis-chassis">
+
+    <div class="vis-strip">
+      <span class="vis-badge">SPECTRUM <em>ANALYSER</em></span>
+      <span class="vis-vents" aria-hidden="true"></span>
+      <span class="vis-tag" id="visSource"></span>
+      <span class="vis-bpm" id="visBpm"></span>
+    </div>
+
+    <div class="vis-stage" id="visStage"></div>
+
+    <div class="vis-console">
+      <button class="key key-vis" id="btnVis" type="button" aria-pressed="false" title="Start the visual">
+        <span class="glyph">◉</span><span class="key-lab" id="visLab">START</span>
+      </button>
+
+      <div class="vis-readout">
+        <div class="vis-preset" id="visPreset">AURORA WELL</div>
+        <div class="vis-sub" id="visSub">A MilkDrop-style feedback visual, driven by the station you are listening to.</div>
+      </div>
+
+      <div class="vis-keys">
+        <button class="key key-sm" id="btnVisPrev" type="button" title="Previous preset">
+          <span class="glyph">‹</span><span class="key-lab">PREV</span>
+        </button>
+        <button class="key key-sm" id="btnVisCycle" type="button" title="Stop or start cycling presets">
+          <span class="glyph">∞</span><span class="key-lab">CYCLING</span>
+        </button>
+        <button class="key key-sm" id="btnVisNext" type="button" title="Next preset">
+          <span class="glyph">›</span><span class="key-lab">NEXT</span>
+        </button>
+        <button class="key key-sm" id="btnVisBack" type="button" aria-pressed="false" title="Run the visual as the page background">
+          <span class="glyph">▤</span><span class="key-lab">BACKDROP</span>
+        </button>
+        <button class="key key-sm" id="btnVisFull" type="button" title="Fill the screen">
+          <span class="glyph">⛶</span><span class="key-lab">FULL</span>
         </button>
       </div>
     </div>
@@ -276,6 +325,9 @@
 <script src="js/taxonomy.js"></script>
 <script src="js/save.js"></script>
 <script src="js/app.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/milkdrop.js"></script>
+<script src="js/visualizer.js"></script>
 <script src="js/cast.js"></script>
 <script src="js/osbridge.js"></script>
 </body>

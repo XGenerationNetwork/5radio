@@ -189,6 +189,17 @@
   V.stop = function () {
     running = false;
     if (raf) { cancelAnimationFrame(raf); raf = 0; }
+
+    /* Wipe the visible frame. The feedback targets keep their history, so a
+       restart picks the picture up where it left off — but leaving the last
+       frame on screen puts PRESS START over whatever happened to be bright
+       when it stopped, which is unreadable about half the time. */
+    if (engine && engine.gl) {
+      var g = engine.gl;
+      g.bindFramebuffer(g.FRAMEBUFFER, null);
+      g.clearColor(0, 0, 0, 1);
+      g.clear(g.COLOR_BUFFER_BIT);
+    }
     el.deck.classList.remove('is-on');
     el.btnLab.textContent = 'START';
     el.btn.setAttribute('aria-pressed', 'false');

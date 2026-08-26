@@ -221,9 +221,17 @@ The picture can be in the deck, behind the page, or filling the screen. Building
 an engine per home would mean three GL contexts and three copies of the feedback
 history — and the history *is* the picture, so every move would flash black.
 Instead there is one canvas moved between three parents; the feedback buffer
-never learns it went anywhere. In BACKDROP the page's own ground goes
-transparent and a scrim goes over the visual, or the text stops being readable
-the moment a preset turns bright.
+never learns it went anywhere.
+
+In BACKDROP the neon grid stays where it is and the visual is **screened onto
+it** rather than laid over it. Screen keeps whichever of the two is brighter,
+and a MilkDrop frame is mostly black with bright traces through it — so the
+black is where the horizon still shows through, and the traces glow over the
+top. (The grid is repeated onto the backdrop element rather than left on
+<body>, because a background on <body> is propagated to the viewport canvas,
+which sits outside every stacking context and is not something a blend mode can
+blend against.) A scrim still goes over both, so text stays readable when a
+preset turns bright.
 
 **FULL** uses the Fullscreen API on the stage alone. A page can be refused it by
 permissions policy, in which case it says so — BACKDROP plus the browser's own

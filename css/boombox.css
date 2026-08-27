@@ -1158,6 +1158,26 @@ body.vis-background::before {
 
 /* ── cinema: what a television gets ── */
 
+/* Cinema reaches the backdrop through the same class the page does, and so
+   inherited the page's treatment: the neon grid behind, the visual screened
+   onto it, a scrim over the top. All three are right for a *page* — they keep
+   the site's ground visible and its text readable. On a television there is no
+   page. The picture is the whole reason the link was cast, so here it is
+   painted at full strength on black: no grid behind it, nothing screened, and
+   nothing dimming it. */
+body.vis-cinema .vis-back {
+  background-color: #000;
+  background-image: none;
+}
+body.vis-cinema .vis-back .vis-canvas { mix-blend-mode: normal; }
+body.vis-cinema::before { background: transparent; }
+
+/* Unless someone is actually there. A mouse moved on a laptop brings the
+   controls back over a full-strength visual, and unreadable controls are worse
+   than a dimmed picture — so the scrim returns with them, and leaves again
+   when they do. Nothing on a television ever moves a mouse. */
+body.vis-cinema.vis-woken::before { background: rgba(8, 9, 11, 0.55); }
+
 body.vis-cinema .site-head,
 body.vis-cinema .site-foot,
 body.vis-cinema main {
